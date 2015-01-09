@@ -1,12 +1,20 @@
 #include <Servo.h>
 
+// slip ring color coding
+// red    - V+
+// yellow - latch
+// green  - data
+// blue   - (unused)
+// white  - clock
+// black  - ground
+
 const int throttlePotPin = 0; // A0
 const int motorPin = 8;
 Servo motor;
 
-const int shiftClockPin = 40;
-const int shiftDataPin = 41;
-const int latchPin = 42;
+const int shiftClockPin = 40; // white
+const int shiftDataPin = 41; // green
+const int latchPin = 42; // yellow
 
 float framesPerSecond = 60;
 const int slicesPerFrame = 64;
