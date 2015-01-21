@@ -8,40 +8,36 @@
 // white  - clock
 // black  - ground
 
-const int throttlePotPin = 0; // A0
-const int motorPin = 8;
+const int ThrottlePotPin = 0; // A0
+const int MotorPin = 8;
 Servo motor;
 
-const int shiftClockPin = 40; // white
-const int shiftDataPin = 41; // green
-const int latchPin = 42; // yellow
+const int ShiftClockPin = 40; // white
+const int ShiftDataPin = 41; // green
+const int LatchPin = 42; // yellow
 
-float framesPerSecond = 60;
-const int slicesPerFrame = 64;
-unsigned long microsPerFrame;
+const float FramesPerSecond = .5;
+const int ColCount = 8;
+const int RowCount = 8;
+const int SlicesPerFrame = 64;
+const unsigned long MicrosPerFrame = 1000000 / FramesPerSecond;
+
+// Data include depends on the dimensional constants above.
+#include "scratch_data.h"
+
+// global vars
 unsigned long frameStartTime;
 int sliceNumber;
 
-char data[8][65] = {
-  "--     --   ---------   --          --            -----        ",
-  "--     --   --          --          --           --   --       ",
-  "--     --   --          --          --          --     --      ",
-  "---------   ---------   --          --          --     --      ",
-  "--     --   --          --          --          --     --      ",
-  "--     --   --          --          --          --     --      ",
-  "--     --   --          --          --           --   --       ",
-  "--     --   ---------   ---------   ---------     -----        "
-};
-  
+
 void setup() {
   Serial.begin(9600);
-  motor.attach(motorPin);
+  motor.attach(MotorPin);
   
-  pinMode(latchPin, OUTPUT);
-  pinMode(shiftClockPin, OUTPUT);
-  pinMode(shiftDataPin, OUTPUT);
+  pinMode(LatchPin, OUTPUT);
+  pinMode(ShiftClockPin, OUTPUT);
+  pinMode(ShiftDataPin, OUTPUT);
   
-  microsPerFrame = 1000000 / framesPerSecond;
   frameStartTime = micros();
   sliceNumber = 0;
 }
@@ -49,33 +45,37 @@ void setup() {
 void loop() {
   // shift out a slice if enough time has passed
   unsigned long nextSliceTime = frameStartTime
-                  + microsPerFrame * (sliceNumber + 1) / slicesPerFrame;
+                  + MicrosPerFrame * (sliceNumber + 1) / SlicesPerFrame;
   if (nextSliceTime <= micros()) {
-    byte slice = getSlice(sliceNumber);
-    digitalWrite(latchPin, LOW);
-    shiftOut(shiftDataPin, shiftClockPin, LSBFIRST, slice);
-    digitalWrite(latchPin, HIGH);
+    byte slice[ColCount];
+    getSlice(slice, sliceNumber);
+    digitalWrite(LatchPin, LOW);
+    for (int i = 0; i < ColCount; i++) {
+      shiftOut(ShiftDataPin, ShiftClockPin, LSBFIRST, slice[i]);
+    }
+    digitalWrite(LatchPin, HIGH);
     sliceNumber++;
-    if (sliceNumber >= 64) {
+    if (sliceNumber >= SlicesPerFrame) {
       sliceNumber = 0;
-      frameStartTime += microsPerFrame;
+      frameStartTime += MicrosPerFrame;
     }
   }
   
   // update throttle
-  int throttle = analogRead(throttlePotPin);
+  int throttle = analogRead(ThrottlePotPin);
   throttle = map(throttle, 0, 1023, 0, 180);
   motor.write(throttle);
 }
 
-byte getSlice(int number) {
-  byte slice = 0;
-  for (int i = 0; i < 8; i++) {
-    if (data[i][number] != ' ') {
-      bitSet(slice, i);
+void getSlice(byte slice[], int number) {
+  for (int i = 0; i < ColCount; i++) {
+    slice[i] = 0;
+    for (int j = 0; j < RowCount; j++) {
+      if (data[i][j][number] != ' ') {
+        bitSet(slice[i], j);
+      }
     }
   }
-  return slice;
 }
 
 
