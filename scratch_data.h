@@ -1,4 +1,4 @@
-
+#include "dimensions.h"
 // +1 for null termination
 char data[ColCount][RowCount][SlicesPerFrame + 1] = {
   {
