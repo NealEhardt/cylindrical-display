@@ -1,6 +1,5 @@
-#include "dimensions.h"
 // +1 for null termination
-char data[ColCount][RowCount][SlicesPerFrame + 1] = {
+char data[8][8][64 + 1] = {
   {
     "--     --   ---------   --          --            -----         ",
     "--     --   --          --          --           --   --        ",

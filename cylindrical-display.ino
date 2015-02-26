@@ -39,13 +39,24 @@ void setup() {
 }
 
 void loop() {
+  updateThrottle();
+  //updateDisplay();
+}
+
+void updateThrottle() {
+  int throttle = analogRead(ThrottlePotPin);
+  throttle = map(throttle, 0, 1023, 0, 180);
+  motor.write(throttle);
+}
+
+void updateDisplay() {
   // shift out a slice if enough time has passed
   unsigned long nextSliceTime = frameStartTime
                                 + MicrosPerFrame * (sliceNumber + 1) / SlicesPerFrame;
   if (nextSliceTime <= micros()) {
     byte slice[ColCount];
     getScratchSlice(slice, sliceNumber);
-    //displaySlice(slice);
+    displaySlice(slice);
     
     sliceNumber++;
     if (sliceNumber >= SlicesPerFrame) {
@@ -53,11 +64,6 @@ void loop() {
       frameStartTime += MicrosPerFrame;
     }
   }
-
-  // update throttle
-  int throttle = analogRead(ThrottlePotPin);
-  throttle = map(throttle, 0, 1023, 0, 180);
-  motor.write(throttle);
 }
 
 void getScratchSlice(byte slice[], int number) {
