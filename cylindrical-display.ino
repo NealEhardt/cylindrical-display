@@ -13,8 +13,8 @@
 const int ThrottlePotPin = 0; // A0
 const int MotorPin = 8;
 const int ShiftClockPin = 40; // white
-const int ShiftDataPin = 41; // green
-const int LatchPin = 42; // yellow
+const int ShiftDataPin = 41; // black
+const int LatchPin = 42; // blue
 
 
 // global variables
@@ -40,7 +40,7 @@ void setup() {
 
 void loop() {
   updateThrottle();
-  //updateDisplay();
+  updateDisplay();
 }
 
 void updateThrottle() {
@@ -70,7 +70,7 @@ void getScratchSlice(byte slice[], int number) {
   for (int i = 0; i < ColCount; i++) {
     slice[i] = 0;
     for (int j = 0; j < RowCount; j++) {
-      if (data[i][j][number] != ' ') {
+      if (scratchData[i][j][number] != ' ') {
         bitSet(slice[i], j);
       }
     }
@@ -80,7 +80,10 @@ void getScratchSlice(byte slice[], int number) {
 void displaySlice(byte slice[]) {
   digitalWrite(LatchPin, LOW);
   for (int i = 0; i < ColCount; i++) {
-    shiftOut(ShiftDataPin, ShiftClockPin, LSBFIRST, slice[i]);
+    shiftOut(ShiftDataPin, ShiftClockPin, LSBFIRST, 0);
+  }
+  for (int i = 0; i < ColCount; i++) {
+    shiftOut(ShiftDataPin, ShiftClockPin, LSBFIRST, slice[0]);
   }
   digitalWrite(LatchPin, HIGH);
 }
@@ -105,6 +108,11 @@ void getSerialSlice(byte slice[]) {
 }
 
 /*
+ * Expected input is a list of base-10 numbers
+ * followed by a newline.
+ * 
+ * For example, "128,5,2,1\n" or "64 32 16 8\n".
+ * 
   SerialEvent occurs whenever a new data comes in the
  hardware serial RX.  This routine is run between each
  time loop() runs, so using delay inside loop can delay
