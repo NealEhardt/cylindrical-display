@@ -5,19 +5,26 @@
 // slip ring color coding
 // red    - V+
 // yellow - latch
-// green  - data
-// blue   - (unused)
+// green  - data out
+// blue   - (unused / data in)
 // white  - clock
 // black  - ground
 
+// Analog in pins
 const int ThrottlePotPin = 0; // A0
+
+// PWM pins
 const int MotorPin = 8;
+
+// Digital pins
+const int DebugPin = 13;
 const int ShiftClockPin = 40; // white
-const int ShiftDataPin = 41; // black
-const int LatchPin = 42; // blue
+const int ShiftDataPin = 41; // green
+const int LatchPin = 42; // yellow
+const int MagnetPin = 50;
 
 
-// global variables
+// global state
 unsigned long frameStartTime;
 int sliceNumber;
 Servo motor;
@@ -28,11 +35,13 @@ String inputString = "";
 void setup() {
   Serial.begin(9600);
   Serial.println("Hello! I'm an Arduino.");
+  
   motor.attach(MotorPin);
-
+  pinMode(DebugPin, OUTPUT);
   pinMode(LatchPin, OUTPUT);
   pinMode(ShiftClockPin, OUTPUT);
   pinMode(ShiftDataPin, OUTPUT);
+  pinMode(MagnetPin, INPUT);
 
   frameStartTime = micros();
   sliceNumber = 0;
@@ -47,6 +56,9 @@ void updateThrottle() {
   int throttle = analogRead(ThrottlePotPin);
   throttle = map(throttle, 0, 1023, 0, 180);
   motor.write(throttle);
+  
+  bool isMagnet = digitalRead(MagnetPin);
+  digitalWrite(DebugPin, isMagnet);
 }
 
 void updateDisplay() {
@@ -70,7 +82,7 @@ void getScratchSlice(byte slice[], int number) {
   for (int i = 0; i < ColCount; i++) {
     slice[i] = 0;
     for (int j = 0; j < RowCount; j++) {
-      if (scratchData[i][j][number] != ' ') {
+      if (scratchData[number][j][i] != ' ') {
         bitSet(slice[i], j);
       }
     }
@@ -80,10 +92,7 @@ void getScratchSlice(byte slice[], int number) {
 void displaySlice(byte slice[]) {
   digitalWrite(LatchPin, LOW);
   for (int i = 0; i < ColCount; i++) {
-    shiftOut(ShiftDataPin, ShiftClockPin, LSBFIRST, 0);
-  }
-  for (int i = 0; i < ColCount; i++) {
-    shiftOut(ShiftDataPin, ShiftClockPin, LSBFIRST, slice[0]);
+    shiftOut(ShiftDataPin, ShiftClockPin, LSBFIRST, slice[i]);
   }
   digitalWrite(LatchPin, HIGH);
 }
