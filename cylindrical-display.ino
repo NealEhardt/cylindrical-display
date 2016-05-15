@@ -28,12 +28,11 @@ const int MagnetPin = 50;
 unsigned long frameStartTime;
 int sliceNumber;
 Servo motor;
-byte sliceColumns[ColCount];
-String inputString = "";
-
+byte serialSlice[ColCount];
+int serialSliceIdx = 0;
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
   Serial.println("Hello! I'm an Arduino.");
   
   motor.attach(MotorPin);
@@ -45,16 +44,24 @@ void setup() {
 
   frameStartTime = micros();
   sliceNumber = 0;
+  
+  clearDisplay();
+  clearDisplay();
 }
 
 void loop() {
   updateThrottle();
-  updateDisplay();
+  //updateDisplay();
+}
+
+void clearDisplay() {
+  static byte slice[ColCount] = {0};
+  displaySlice(slice);
 }
 
 void updateThrottle() {
   int throttle = analogRead(ThrottlePotPin);
-  throttle = map(throttle, 0, 1023, 0, 180);
+  throttle = map(throttle, 0, 1023, 10, 170);
   motor.write(throttle);
   
   bool isMagnet = digitalRead(MagnetPin);
@@ -97,30 +104,8 @@ void displaySlice(byte slice[]) {
   digitalWrite(LatchPin, HIGH);
 }
 
-void getSerialSlice(byte slice[]) {
-  int stringIdx = 0;
-  for (int i = 0; i < ColCount; i++) {
-    while (!isDigit(inputString[stringIdx])) {
-      if (inputString[stringIdx] == '\n') {
-        Serial.print(String()+"Slice terminated too soon (col "+i+")\n");
-        return;
-      }
-      stringIdx++;
-    }
-    int start = stringIdx;
-    while (isDigit(inputString[stringIdx])) {
-      stringIdx++;
-    }
-    String substr = inputString.substring(start, stringIdx);
-    slice[i] = substr.toInt();
-  }
-}
-
 /*
- * Expected input is a list of base-10 numbers
- * followed by a newline.
- * 
- * For example, "128,5,2,1\n" or "64 32 16 8\n".
+ * Reads ColCount bytes at a time and shifts them out
  * 
   SerialEvent occurs whenever a new data comes in the
  hardware serial RX.  This routine is run between each
@@ -129,14 +114,11 @@ void getSerialSlice(byte slice[]) {
  */
 void serialEvent() {
   while (Serial.available()) {
-    char inChar = (char)Serial.read();
-    inputString += inChar;
+    serialSlice[serialSliceIdx++] = Serial.read();
     
-    if (inChar == '\n') {
-      byte slice[ColCount];
-      getSerialSlice(slice);
-      displaySlice(slice);
-      inputString = "";
+    if (serialSliceIdx == ColCount) {
+      serialSliceIdx = 0;
+      displaySlice(serialSlice);
     }
   }
 }
