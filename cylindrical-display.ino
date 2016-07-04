@@ -21,15 +21,20 @@ const int DebugPin = 13;
 const int ShiftClockPin = 40; // white
 const int ShiftDataPin = 41; // green
 const int LatchPin = 42; // yellow
+const int ThrottleLimitPin = 30;
 const int MagnetPin = 50;
 
+// Constants
+const int ThrottleLimit = 38;
 
-// global state
+// Global state
 unsigned long frameStartTime;
 int sliceNumber;
 Servo motor;
 byte serialSlice[ColCount];
 int serialSliceIdx = 0;
+unsigned long magnetTimer;
+unsigned long serialTimer;
 
 void setup() {
   Serial.begin(115200);
@@ -40,17 +45,23 @@ void setup() {
   pinMode(LatchPin, OUTPUT);
   pinMode(ShiftClockPin, OUTPUT);
   pinMode(ShiftDataPin, OUTPUT);
-  pinMode(MagnetPin, INPUT);
+  pinMode(ThrottleLimitPin, INPUT);
+  pinMode(MagnetPin, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(MagnetPin),
+                  handleMagnetFalling, RISING);
 
   frameStartTime = micros();
   sliceNumber = 0;
   
   clearDisplay();
+  updateThrottle(false);
   clearDisplay();
+  updateThrottle(false);
+  delay(2000);
 }
 
 void loop() {
-  updateThrottle();
+  updateThrottle(true);
   //updateDisplay();
 }
 
@@ -59,13 +70,20 @@ void clearDisplay() {
   displaySlice(slice);
 }
 
-void updateThrottle() {
+void updateThrottle(bool isLogging) {
   int throttle = analogRead(ThrottlePotPin);
   throttle = map(throttle, 0, 1023, 10, 170);
+  bool isLimited = !digitalRead(ThrottleLimitPin);
+  if (isLimited) {
+    throttle = min(throttle, ThrottleLimit);
+  }
   motor.write(throttle);
-  
-  bool isMagnet = digitalRead(MagnetPin);
-  digitalWrite(DebugPin, isMagnet);
+  if (isLogging && millis() - serialTimer > 1500) {
+    serialTimer = millis();
+    //Serial.println(String("throttle=") + throttle + " and isLimited=" + isLimited);
+  }
+
+  digitalWrite(DebugPin, millis() - magnetTimer < 500);
 }
 
 void updateDisplay() {
@@ -120,6 +138,17 @@ void serialEvent() {
       serialSliceIdx = 0;
       displaySlice(serialSlice);
     }
+  }
+}
+
+/*
+ * It's an interrupt on a reed switch
+ */
+void handleMagnetFalling() {
+  unsigned long t = millis();
+  if (t - magnetTimer > 2) { // debounce
+    Serial.println("tick");
+    magnetTimer = t;
   }
 }
 
