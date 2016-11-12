@@ -48,7 +48,7 @@ void setup() {
   pinMode(ThrottleLimitPin, INPUT);
   pinMode(MagnetPin, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(MagnetPin),
-                  handleMagnetFalling, RISING);
+                  handleMagnetRising, RISING);
 
   frameStartTime = micros();
   sliceNumber = 0;
@@ -144,9 +144,9 @@ void serialEvent() {
 /*
  * It's an interrupt on a reed switch
  */
-void handleMagnetFalling() {
+void handleMagnetRising() {
   unsigned long t = millis();
-  if (t - magnetTimer > 2) { // debounce
+  if (t - magnetTimer > 10) { // debounce
     Serial.println("tick");
     magnetTimer = t;
   }
